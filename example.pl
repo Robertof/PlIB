@@ -21,5 +21,6 @@ my $plib = Plib::main->new ("Plib", "plib", "PerL IrcBot", "", 0, 1, 1, "irc.uni
 $plib->setChans ("#Unit-X");
 # Usage: $mainclass->hook_plugin (moduleName) [only 1 module for time]
 $plib->hook_plugin ("firstplugin");
+$plib->hook_plugin ("unitx");
 # No usage
 $plib->startAll;
