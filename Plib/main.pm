@@ -84,6 +84,18 @@ sub getAllChannels {
 	return ($withKey ? $self->{"functions"}->hashJoin ($keySeparator, $chanSeparator, 0, 0, $self->{"channels"}) : $self->{"functions"}->hashJoin ($chanSeparator, "", 0, 1, $self->{"channels"}));
 }
 
+sub sendMsg {
+	my ($self, $to, $what) = @_;
+	if (length ($what) > 255) {
+		# Prevent too long messages
+		# (tester of this part are welcome)
+		$self->{"socket"}->send ("PRIVMSG ${to} :" . substr ($what, 0, 255) . "\r\n");
+		$self->sendMsg ($to, substr ($what, 255));
+	} else {
+		$self->{"socket"}->send ("PRIVMSG ${to} :${what}\r\n");
+	}
+}
+
 sub matchMsg {
 	my ($self, $onWhat) = @_;
 	my $chlist = $self->getAllChannels ("|", 0, "");
@@ -115,7 +127,7 @@ sub startAll {
 	my $self = shift;
 	die "Please run 'setChans (chan1, chan2:key, chan3)' first.\n" if (not $self->{"channels"});
 	print "[+] Bot info ..\n";
-	print "    Joining: " . $self->{"functions"}->hashJoin (", ", "", 0, 1, $self->{"channels"}) . "\n";
+	print "    Joining: " . $self->getAllChannels (", ", 0) . "\n";
 	print "    At: " . $self->{"server"} . ":" . $self->{"port"} . "\n";
 	print "    With plugins: " . $self->{"functions"}->hashJoin (", ", "", 0, 1, $self->{"hooked_modules"}) . "\n";
 	print "    And with nickname: " . $self->{"nickname"} . "\n\n";

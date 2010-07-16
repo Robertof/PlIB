@@ -13,7 +13,7 @@ sub new {
 sub atInit {
 	my ($self, $isTest, $botClass) = @_;
 	return 1 if $isTest;
-	$botClass->{"socket"}->send ("PRIVMSG " . $botClass->{"functions"}->hashJoin (",", "", 0, 1, $botClass->{"channels"}) . " :Hello world!\n");
+	$botClass->sendMsg ($botClass->{"functions"}->hashJoin (",", "", 0, 1, $botClass->{"channels"}), "Hello world!");
 }
 
 sub atWhile {
@@ -21,7 +21,7 @@ sub atWhile {
 	return 1 if $isTest;
 	my $info;
 	if ($nick and $ident and $host and $info = $botClass->matchMsg ($sent) and $info->{"message"} =~ /^!info/i) {
-		$botClass->{"socket"}->send ("PRIVMSG " . $info->{"chan"} . " :Hi, ${nick}. You wrote a message in " . $info->{"chan"} . ". Your hostmask is ${host} and your ident is ${ident}. Powered by PlIB O:\n");
+		$botClass->sendMsg ($info->{"chan"}, "Hi, ${nick}. You wrote a message in " . $info->{"chan"} . ". Your hostmask is ${host} and your ident is ${ident}. Powered by PlIB O:");
 	}
 }
 
