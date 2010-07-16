@@ -19,7 +19,6 @@ sub atInit {
 sub atWhile {
 	my ($self, $isTest, $botClass, $sent, $nick, $ident, $host) = @_;
 	return 1 if $isTest;
-	print "Server sent: ${sent}\n";
 	my $info;
 	if ($nick and $ident and $host and $info = $botClass->matchMsg ($sent) and $info->{"message"} =~ /!info/i) {
 		$botClass->{"socket"}->send ("PRIVMSG " . $info->{"chan"} . " :Hi, ${nick}. You wrote a message in " . $info->{"chan"} . ". Your hostmask is ${host} and your ident is ${ident}. Powered by PlIB O:\n");
