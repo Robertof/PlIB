@@ -1,6 +1,15 @@
 #!/usr/bin/perl
-# PlIB - test plugin
-# Author: Robertof
+###############################################################
+# @name.....................................plib first plugin #
+# @realname.......................................PerL IrcBot #
+# @author............................................Robertof #
+# @mail.....................................robertof@anche.no #
+# @licence..........................................GNU/GPL 3 #
+# @lang..................................................Perl #
+# @requirements...IO::Socket::INET or IO::Socket::SSL for SSL #
+# @isthisfinished.........................................yes #
+#                            Enjoy                            #
+###############################################################
 
 package Plib::plugins::firstplugin;
 use strict;
