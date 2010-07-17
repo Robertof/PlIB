@@ -41,7 +41,7 @@ sub atWhile {
 				$reppage =~ s/(\n|\r|\t)//g;
 				if ($reppage =~ /\[\+(\d+) \/ \-(\d+)\]/) {
 					my $rep = int ($1) - int ($2);
-					my $fixedstr = "(${1} " . ( $1 ne 1 ? "punti positivi" : "punto positivo" ) . " - ${2} " . ( $2 ne 1 ? "punti negativi" : "punto positivo" ) . ")";
+					my $fixedstr = "(${1} " . ( $1 ne 1 ? "punti positivi" : "punto positivo" ) . " - ${2} " . ( $2 ne 1 ? "punti negativi" : "punto negativo" ) . ")";
 					$botClass->sendMsg ($info->{"chan"}, ( $isExt ? "La reputazione di questo utente e' ${rep} ${fixedstr}." : "La tua reputazione e' ${rep} ${fixedstr}." ));
 				} else {
 					$botClass->sendMsg ($info->{"chan"}, ( $isExt ? "Non sono riuscito a recuperare la reputazione di questo utente." : "Non sono riuscito a recuperare la tua reputazione." ));
