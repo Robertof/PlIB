@@ -14,7 +14,7 @@ sub atWhile {
 	my ($self, $isTest, $botClass, $sent, $nick, $ident, $host) = @_;
 	return 1 if $isTest;
 	my $chlist = $botClass->getAllChannels ("|", 0);
-	if ($sent =~ /^:?.+?!~?.+?@[^ ]+ KICK (${chlist}) $botClass->{'nickname'} :.+/i) {
+	if ($sent =~ /^:?.+?!~?.+?@[^ ]+ KICK (${chlist}) $botClass->{'nickname'} :.+/im) {
 		my $chankey = $botClass->{"channels"}->{$1};
 		$botClass->{"socket"}->send ("JOIN ${1}" . ( $chankey ? " ${chankey}" : "" ) . "\n");
 	}

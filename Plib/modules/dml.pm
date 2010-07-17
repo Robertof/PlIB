@@ -41,6 +41,9 @@ sub atWhile {
 			my $action = lc ($1);
 			my $mname = $2;
 			$mname =~ s/(;|\s|\.)//g;
+			if ($mname =~ /dml/i and $action eq "unload") {
+				$botClass->sendMsg ($info->{"chan"}, "Hey, are you crazy!?");
+			}
 			# Check perms..
 			if ($self->havePerms ($nick, $action)) {
 				if ($action eq "load" and exists $botClass->{"hooked_modules"}->{$mname}) {
@@ -52,7 +55,6 @@ sub atWhile {
 					my $realmname = "Plib::modules::${mname}";
 					# Check if module exists / unloads successfully
 					eval "require ${realmname}" if $action eq "load";
-					
 					delete $botClass->{"hooked_modules"}->{$mname} if $action eq "unload";
 					eval "no ${realmname}" if $action eq "unload";
 					if (not $@) {
