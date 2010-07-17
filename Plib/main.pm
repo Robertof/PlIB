@@ -68,20 +68,25 @@ sub isDebug {
 	return $_[0]->{"debug"};
 }
 
-sub hook_plugin {
-	my ($self, $pluginName) = @_;
-	my $fpn = "Plib::plugins::${pluginName}";
-	eval "require ${fpn}";
-	die "[!] Sorry, your plugin doesn't exist / is not valid. It must be in 'plugins' directory\n    and must have 'package Plib::plugins::pluginname' at the beginning.\n    Error: $@\n" if $@;
-	eval "${fpn}->atInit (1);${fpn}->atWhile (1)";
-	die "[!] Your module is not valid. It must have the methods 'atInit' and 'atWhile'.\n    Error: $@\n" if $@;
-	$self->{"hooked_modules"}->{$pluginName} = $fpn;
-	print "[+] Hooked module ${pluginName} ..\n";
+sub hook_modules {
+	my $self = shift;
+	foreach my $moduleName (@_) {
+		print "[~] Hooking module $moduleName..\n";
+		my $fpn = "Plib::modules::${moduleName}";
+		eval "require ${fpn}";
+		die "[!] Sorry, your module doesn't exist / is not valid. It must be in 'modules' directory\n    and must have 'package Plib::modules::modulename' at the beginning.\n    Error: $@\n" if $@;
+		eval "${fpn}->atInit (1);${fpn}->atWhile (1)";
+		die "[!] Your module is not valid. It must have the methods 'atInit' and 'atWhile'.\n    Error: $@\n" if $@;
+		eval "\$fpn = ${fpn}->new()";
+		die "[!] Your module must have 'new' method.\n    Detailed error: $@\n" if $@;
+		$self->{"hooked_modules"}->{$moduleName} = $fpn;
+		print "[+] Hooked module ${moduleName} :D\n";
+	}
 }
 
 sub getAllChannels {
 	my ($self, $chanSeparator, $withKey, $keySeparator) = @_;
-	return ($withKey ? $self->{"functions"}->hashJoin ($keySeparator, $chanSeparator, 0, 0, $self->{"channels"}) : $self->{"functions"}->hashJoin ($chanSeparator, "", 0, 1, $self->{"channels"}));
+	return ($withKey ? $self->{"functions"}->hashJoin ($keySeparator, $chanSeparator, 0, 0, $self->{"channels"}) : $self->{"functions"}->hashJoin ("", $chanSeparator, 0, 1, $self->{"channels"}));
 }
 
 sub sendMsg {
@@ -129,7 +134,7 @@ sub startAll {
 	print "[+] Bot info ..\n";
 	print "    Joining: " . $self->getAllChannels (", ", 0) . "\n";
 	print "    At: " . $self->{"server"} . ":" . $self->{"port"} . "\n";
-	print "    With plugins: " . $self->{"functions"}->hashJoin (", ", "", 0, 1, $self->{"hooked_modules"}) . "\n";
+	print "    With modules: " . $self->{"functions"}->hashJoin ("", ", ", 0, 1, $self->{"hooked_modules"}) . "\n";
 	print "    And with nickname: " . $self->{"nickname"} . "\n\n";
 	$self->{"rc-server"} = $self->{"functions"}->preg_quote ($self->{"server"});
 	$self->{"rc-nick"}   = $self->{"functions"}->preg_quote ($self->{"nickname"});
@@ -142,7 +147,7 @@ sub startAll {
 		print $ss if $self->isDebug;
 		$sockClass->send ("PONG :$1") if ( $ss =~ /^PING :(.+)/si );
 		($nick, $ident, $host) = ($self->{"functions"}->trim ($1), $self->{"functions"}->trim ($2), $self->{"functions"}->trim ($3)) if ($ss =~ /^:?(.+?)!~?(.+?)@([^ ]+).+/);
-		# Match numeric 376 (end of motd) or 422 (no motd), and send join / identify commands + exec plugins
+		# Match numeric 376 (end of motd) or 422 (no motd), and send join / identify commands + exec modules
 		if ($self->{"functions"}->matchServerNumeric ($self->{"rc-nick"}, $self->{"rc-server"}, 376, $ss) or $self->{"functions"}->matchServerNumeric ($self->{"rc-nick"}, $self->{"rc-server"}, 422, $ss)) {
 			$self->send ( "PRIVMSG NickServ :IDENTIFY $self->{'idpass'}\n" ) if ($self->{"idpass"});
 			print "[DEBUG] Matched server numeric\n" if $self->isDebug;
@@ -154,7 +159,12 @@ sub startAll {
 			}
 		} else {
 			foreach (keys %{$self->{"hooked_modules"}}) {
-				$self->{"hooked_modules"}->{$_}->atWhile (0, $self, $ss, $nick, $ident, $host);
+				eval "\$self->{'hooked_modules'}->{$_}->atWhile (1)";
+				if (not $@) {
+					$self->{"hooked_modules"}->{$_}->atWhile (0, $self, $ss, $nick, $ident, $host);
+				} else {
+					delete $self->{"hooked_modules"}->{$_};
+				}
 			}
 		}
 	}

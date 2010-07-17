@@ -30,7 +30,7 @@ sub new {
 }
 
 sub startConnection {
-	# This will return the opened socket.
+	# This will return 'self'
 	my $self = $_[0];
 	print "[DEBUG] Function 'startConnection' called from module 'sockutil', opening connection to " . $self->{"addr"} . ":" . $self->{"port"} . " (ssl: " . $self->{"ssl"} . ")\n" if $self->{"mhash"}->isDebug;
 	print "[~] Opening connection to '".$self->{"addr"}.":".$self->{"port"}."' with".(($self->{"ssl"})?"":"out")." SSL\n";
