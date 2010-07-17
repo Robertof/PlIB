@@ -43,6 +43,7 @@ sub atWhile {
 			$mname =~ s/(;|\s|\.)//g;
 			if ($mname =~ /dml/i and $action eq "unload") {
 				$botClass->sendMsg ($info->{"chan"}, "Hey, are you crazy!?");
+				return 1;
 			}
 			# Check perms..
 			if ($self->havePerms ($nick, $action)) {
