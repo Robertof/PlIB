@@ -1,11 +1,13 @@
 #!/usr/bin/perl
 # Another plugin
-# This plugin hooks command 'aboutme' and 'aboutuser'
-# and checks if user is registered
+# This plugin hooks command 'aboutme', 'aboutuser' and 'aboutopic'.
+# aboutme and aboutuser checks if user is registered
 # on forum 'unitx.net'. If yes, 
 # display his nickname, his title,
 # his message number, his inscription date,
-# and his reputation.
+# and his reputation. aboutopic searches for
+# a topic and shows his name, responses, last response date,
+# last response author and post link.
 # Author: Robertof
 # Language: Italian
 # Requirements: LWP::Simple, URI::Escape, Plib::*
@@ -25,7 +27,7 @@ sub atWhile {
 	return 1 if $isTest;
 	my $info;
 	if ($nick and $ident and $host and $info = $botClass->matchMsg ($sent)) {
-		if ($info->{"message"} =~ /^!aboutme$/i or $info->{"message"} =~ /^!aboutuser ([^\s]+)$/i) {
+		if ($info->{"message"} =~ /^!aboutme$/i or $info->{"message"} =~ /^!aboutuser (.+)$/i) {
 			# Check if user exists
 			$nick = $botClass->{"functions"}->trim ($1) if defined $1 and $1 ne "";
 			my $isExt = 0;
@@ -71,25 +73,4 @@ sub strip_tags {
 	$str =~ s/<(?:[^>'"]*|(['"]).*?\1)*>//gs;
 	return $str;
 }
-
-#sub post_request {
-	#my ($self, $page, $host, $content) = @_;
-	#my $sock = IO::Socket::INET->new (
-		#PeerHost => $host,
-		#PeerPort => 80,
-		#Proto    => "tcp"
-	#) or return 0;
-	#print $sock "POST ${page} HTTP/1.1\r\n";
-	#print $sock "Host: ${host}\r\n";
-	#print $sock "Connection: close\r\n";
-	#print $sock "Content-Length: " . length ($content) . "\r\n";
-	#print $sock "Content-Type: application/x-www-form-urlencoded\r\n\r\n";
-	#print {$sock} $content;
-	#print $sock "\r\n";
-	#my $ret;
-	#while (<$sock>) {
-		#$ret .= $_;
-	#}
-	#return $ret;
-#}
 1;
