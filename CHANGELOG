@@ -1,0 +1,8 @@
+23/7/10
+- New flooding prevention system
+- New event system
+- New modules: autoreconnect (with events), fastkill (configure it in fastkill.pm!!), mood, regex (match regex in any chan with what =~ regex)
+- New function for plugin: hook_event (details in main HOWTO, actually only in Italian)
+- New function for script: evfunc (details in main HOWTO, actually only in Italian)
+- New function: secureQuit (use this instead of closeConnection || exit!!)
+- Other fixes and additions :D

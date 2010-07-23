@@ -75,13 +75,7 @@ sub send {
 
 sub closeConnection {
 	my ($self, $quitMessage) = @_;
-	# !! Patch: 16/7/10 !! #
-	# For stupid ircds (unrealircd), send
-	# a lowercase quit command, because
-	# it's case sensitive.
-	# Author: Robertof.
-	##
-	$self->send ( "quit :${quitMessage}\r\n" );
+	$self->send ("QUIT :${quitMessage}\n");
 	close $self->{"sock"} if $self->{"sock"};
 	# Remove sock variable
 	delete $self->{"sock"};

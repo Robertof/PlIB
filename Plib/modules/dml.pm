@@ -7,6 +7,8 @@
 # Licence: GNU/GPL v3
 
 package Plib::modules::dml;
+use strict;
+use warnings;
 
 # /!\ CONFIGURE PLUGIN HERE !! /!\ #
 sub new {
@@ -36,7 +38,7 @@ sub atWhile {
 	return 1 if $isTest;
 	my $info;
 	if ($nick and $ident and $host and $info = $botClass->matchMsg ($sent)) {
-		if ($info->{"message"} =~ /^!dml (load|unload) ([^\s]+)/i) {
+		if ($info->{"message"} =~ /^!dml (load|unload) ([^\s]+)$/i) {
 			# Sanitize module name
 			my $action = lc ($1);
 			my $mname = $2;
@@ -60,16 +62,17 @@ sub atWhile {
 					eval "no ${realmname}" if $action eq "unload";
 					if (not $@) {
 						# Module is valid / has unloaded
-						$botClass->{"hooked_modules"}->{$mname} = $realmname if $action eq "load";
+						$botClass->hook_modules ($mname) if $action eq "load";
 						$botClass->sendMsg ($info->{"chan"}, "Successfully " . ( $action eq "unload" ? "un" : "" ) . "loaded '${mname}'\n");
 					} else {
-						$botClass->sendMsg ($info->{"chan"}, "Module doesn't exist");
+						$botClass->sendMsg ($info->{"chan"}, "Module doesn't exist / Returned an error: $@");
+						eval "no ${realmname}";
 					}
 				}
 			} else {
 				$botClass->sendMsg ($info->{"chan"}, "Permission denied");
 			}
-		} elsif ($info->{"message"} =~ /^!dml list/i) {
+		} elsif ($info->{"message"} =~ /^!dml list$/i) {
 			if ($self->havePerms ($nick, "listmod")) {
 				$botClass->sendMsg ($info->{"chan"}, "Loaded modules: " . $botClass->{"functions"}->hashJoin ("", ", ", 0, 1, $botClass->{"hooked_modules"}));
 			} else {
