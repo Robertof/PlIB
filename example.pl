@@ -18,7 +18,7 @@ use Plib::main;
 # Usage: new (nick, user, real, idpass, isop, debug, usessl, server, port)
 # !! WARNING !! Use class->setChans (chan1:key, chan2:key, chan3, chan4, ecc.) to add chans to join !!
 my $plib = Plib::main->new ("Plib", "plib", "PerL IrcBot", "", 0, 1, 1, "irc.unitx.net", 6697);
-$plib->setChans ("#Unit-X", "#test");
+$plib->setChans ("#Unit-X");
 ### ↓↓↓↓↓ OPTIONAL MODULES ↓↓↓↓↓                                     ###
 #   Usage: $mainclass->hook_modules (module1, module2, module3 ecc.) ###
 $plib->hook_modules ("firstplugin", "dml", "autorejoin", "fastkill", "autoreconnect");
