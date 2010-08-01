@@ -111,7 +111,7 @@ sub hook_modules {
 # Modules only
 sub hook_event {
 	my ($self, $module, $event, $func) = @_;
-	print "[DEBUG] Module '${event}' is hooking event '${event}'..\n";
+	print "[DEBUG] Module '${module}' is hooking event '${event}'..\n";
 	$self->{"hooked_events"}->{$module}->{$event} = $func;
 	print "[DEBUG] Event hooked.\n";
 }
