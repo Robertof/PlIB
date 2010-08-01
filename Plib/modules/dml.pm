@@ -58,11 +58,11 @@ sub atWhile {
 					my $realmname = "Plib::modules::${mname}";
 					# Check if module exists / unloads successfully
 					eval "require ${realmname}" if $action eq "load";
-					delete $botClass->{"hooked_modules"}->{$mname} if $action eq "unload";
 					eval "no ${realmname}" if $action eq "unload";
 					if (not $@) {
 						# Module is valid / has unloaded
 						$botClass->hook_modules ($mname) if $action eq "load";
+						$botClass->unhook_module ($mname) if $action eq "unload";
 						$botClass->sendMsg ($info->{"chan"}, "Successfully " . ( $action eq "unload" ? "un" : "" ) . "loaded '${mname}'\n");
 					} else {
 						$botClass->sendMsg ($info->{"chan"}, "Module doesn't exist / Returned an error: $@");

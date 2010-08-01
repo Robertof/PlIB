@@ -108,6 +108,17 @@ sub hook_modules {
 	}
 }
 
+sub unhook_module {
+	my ($self, $module) = @_;
+	return if not exists $self->{"hooked_modules"}->{$module};
+	print "[~] Unhooking module ${module}..\n";
+	my $realname = "Plib::modules::${module}";
+	eval "no ${realname}";
+	delete $self->{"hooked_modules"}->{$module};
+	delete $self->{"hooked_events"}->{$module} if exists $self->{"hooked_events"}->{$module};
+	print "[+] Done.\n";
+}
+
 # Modules only
 sub hook_event {
 	my ($self, $module, $event, $func) = @_;
@@ -152,12 +163,13 @@ sub sendMsg {
 
 sub matchMsg {
 	my ($self, $onWhat) = @_;
-	my $chlist = $self->getAllChannels ("|", 0, "");
+	my $chlist = ( $_[2] ? $self->{"rc-nick"} . "|" . $self->getAllChannels ("|", 0, "") : $self->getAllChannels ("|", 0, "") );
 	if ($onWhat =~ /^(:?.+?!~?.+?@[^ ]+) PRIVMSG (${chlist}) :(.+)/i) {
 		return {
 					userinfo => $self->{"functions"}->trim ($1) ,
 					chan     => $self->{"functions"}->trim ($2) ,
-					message  => $self->{"functions"}->trim ($3)
+					message  => $self->{"functions"}->trim ($3) ,
+					isPrivate=> ( $2 eq $self->{"nickname"} ? 1 : 0 )
 			   };
 	} else {
 		return 0;
