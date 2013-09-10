@@ -51,9 +51,18 @@ sub preg_quote {
 	return $str;
 }
 
+# Thx to go4expert
+sub in_array {
+	my ($self, $arr, $search_for) = @_;
+	foreach my $value (@$arr) {
+		return 1 if lc ($value) eq lc ($search_for);
+	}
+	return 0;
+}
+
 sub matchServerNumeric {
-	my ($self, $rcnick, $rcserver, $numeric, $onWhat) = @_;
-	return 1 if ($onWhat =~ /^:${rcserver} ${numeric} ${rcnick}/im);
+	my ($self, $numeric, $onWhat) = @_;
+	return 1 if ($onWhat =~ /^:[^\s]+ ${numeric}/im);
 	return 0;
 }
 

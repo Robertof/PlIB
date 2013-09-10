@@ -1,5 +1,4 @@
 PlIB (PerL IrcBot) is a simple IRC Bot in Perl.
 It supports modules, and it's RFC-Compliant.
-
-Enjoy,
-Roberto.
+It was updated recently to reflect the new changes of the core.
+Feel free to read the code.

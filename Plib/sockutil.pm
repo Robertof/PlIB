@@ -32,34 +32,31 @@ sub new {
 sub startConnection {
 	# This will return 'self'
 	my $self = $_[0];
-	print "[DEBUG] Function 'startConnection' called from module 'sockutil', opening connection to " . $self->{"addr"} . ":" . $self->{"port"} . " (ssl: " . $self->{"ssl"} . ")\n" if $self->{"mhash"}->isDebug;
-	print "[~] Opening connection to '".$self->{"addr"}.":".$self->{"port"}."' with".(($self->{"ssl"})?"":"out")." SSL\n";
+	print $self->{"mhash"}->getPrefix . "[~] Opening connection to '".$self->{"addr"}.":".$self->{"port"}."' with".(($self->{"ssl"})?"":"out")." SSL\n";
 	# Load right modules
 	my $sock;
 	if ($self->{"ssl"}) {
-		print "[DEBUG] Using IO::Socket::SSL\n";
 		eval qq{use IO::Socket::SSL};
-		die "[!] Error: if you want to use SSL, you must install module IO::Socket::SSL.\nError: ${@}\n" if $@;
+		die $self->{"mhash"}->getPrefix . "[!] Error: if you want to use SSL, you must install module IO::Socket::SSL.\nError: ${@}\n" if $@;
 		require IO::Socket::SSL;
 		$sock = IO::Socket::SSL->new(
 			PeerHost => $self->{"addr"},
 			PeerPort => $self->{"port"},
 			Proto    => "tcp",
 			Timeout  => 10
-		) or die ("[-] Fatal error for 'IO::Socket::SSL': " . IO::Socket::SSL::errorstr() . "\n");
+		) or die ($self->{"mhash"}->getPrefix . "[-] Fatal error for 'IO::Socket::SSL': " . IO::Socket::SSL::errstr() . "\n");
 	} else {
-		print "[DEBUG] Using IO::Socket::INET\n";
 		eval qq{use IO::Socket::INET};
-		die "[!] Error: you must install module 'IO::Socket::INET'.\nError: ${@}\n" if $@;
+		die $self->{"mhash"}->getPrefix . "[!] Error: you must install module 'IO::Socket::INET'.\nError: ${@}\n" if $@;
 		require IO::Socket::INET;
 		$sock = IO::Socket::INET->new (
 			PeerHost => $self->{"addr"},
 			PeerPort => $self->{"port"},
 			Proto    => "tcp",
 			Timeout  => 10
-		) or die ("[-] Fatal error for 'IO::Socket::INET': ${!}\n");
+		) or die ($self->{"mhash"}->getPrefix . "[-] Fatal error for 'IO::Socket::INET': ${!}\n");
 	}
-	print "[+] Connection opened successfully.\n";
+	print $self->{"mhash"}->getPrefix . "[+] Connection opened successfully.\n";
 	$self->{"sock"} = $sock;
 	return $self;
 }

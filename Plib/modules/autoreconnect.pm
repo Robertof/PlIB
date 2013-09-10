@@ -19,11 +19,11 @@ sub events {
 		$botClass->{"socket"}->closeConnection ("Why are you reading this message?");
 		my $sockClass = $botClass->{"socket"}->startConnection;
 		my $sock = $sockClass->getSock;
-		&{$botClass->evfunc("conn_start")}($botClass);
+		&{$botClass->evfunc("conn_start")}($botClass, $sockClass);
 		$sockClass->send ("USER " . $botClass->{"username"} . " 0 * :" . $botClass->{"realname"} . "\n");
 		$sockClass->send ("NICK " . $botClass->{"nickname"} . "\n");
 		&{$botClass->evfunc("while_begin")}($botClass);
-		$botClass->doWhile;
+		$botClass->doWhile (0);
 	});
 }
 
