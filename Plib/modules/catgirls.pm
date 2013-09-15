@@ -12,6 +12,7 @@ use List::Util qw(shuffle);
 
 my $hasLoaded=0;
 my @posts;
+my @shownPosts;
 #I NEED MOAR SOURCES!
 my @sources=(
              "http://catgirlsdoingcatthings.tumblr.com/rss",
@@ -91,8 +92,7 @@ sub checkACatgirl{
 sub getLinkOnly{
 	my $description=shift;
 
-	$description =~ m/http:\/\/([^>"]*)/i; #m/<img src=([^>]*)/;
-	#$description =~ s/"//;
+	$description =~ m/http:\/\/([^>"]*)/i;
 	return "http://".$1;
 }
 
@@ -116,12 +116,25 @@ sub loadCatgirls{
 	}
 	#just to do something funny.
 	@posts=shuffle @posts;
+	@shownPosts=();
 }
 
 sub randomCatgirl{
 	my $posts_length=scalar @posts;
 	return "WTF" if $posts_length<1;
-    return $posts[int(rand($posts_length))];
+
+	my $index=int(rand($posts_length));
+	my $message=$posts[$index];
+	#done in order to avoid "reposts"
+	splice @posts, $index, 1;
+	push(@shownPosts, $message);
+
+    #doing some checks
+    #maybe I need a better heuristic. this reloads
+    #the archive when half of posts are shown.
+    &loadCatgirls if (scalar @posts < scalar @shownPosts);
+
+	return $message;
 }
 
 1;
