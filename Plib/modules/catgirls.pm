@@ -18,7 +18,9 @@ my @sources=(
              "http://catgirlsdoingcatthings.tumblr.com/rss",
              "http://nocatgirls.tumblr.com/rss",
              "http://tangopapatango.tumblr.com/rss",
-             "http://notd.tumblr.com/rss"
+             "http://notd.tumblr.com/rss",
+             #even if this is not catgirl-related, it's ok.
+             "http://yuriyeah.tumblr.com/rss",
              );
 
 #version 0.2 will include a NSFW filter.
