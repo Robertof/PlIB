@@ -97,6 +97,8 @@ sub getLinkOnly{
 }
 
 sub loadCatgirls{
+        @posts=(); #I forgot it. >_>
+        @shownPosts=();
 	foreach my $source (@sources)
 	{
 		my $feed=XML::FeedPP->new($source);
@@ -116,7 +118,6 @@ sub loadCatgirls{
 	}
 	#just to do something funny.
 	@posts=shuffle @posts;
-	@shownPosts=();
 }
 
 sub randomCatgirl{
