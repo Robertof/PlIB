@@ -113,8 +113,8 @@ sub loadCatgirls{
 			    or $title =~ /No Catgirls Here/i
 			    or $title =~ /pixiv/i
 			    ) {
-				@cat = (getLinkOnly($post->description()), $post->guid);
-				push(@posts, $cat);
+				@cat = (getLinkOnly($post->description), $post->guid);
+				push(@posts, @cat);
 			}
 		}
 	}
@@ -127,15 +127,15 @@ sub randomCatgirl{
 	return "WTF" if $posts_length<1;
 
 	my $index=int(rand($posts_length));
-	my $message=$posts[$index][0] . ' (' . $post[$index][0] . ')';
+	my $message=@posts[$index][0] . ' (' . @post[$index][1] . ')';
 	#done in order to avoid "reposts"
 	splice @posts, $index, 1;
 	push(@shownPosts, $message);
 
-    #doing some checks
-    #maybe I need a better heuristic. this reloads
-    #the archive when half of posts are shown.
-    &loadCatgirls if (scalar @posts < scalar @shownPosts);
+	#doing some checks
+	#maybe I need a better heuristic. this reloads
+	#the archive when half of posts are shown.
+	&loadCatgirls if (scalar @posts < scalar @shownPosts);
 
 	return $message;
 }
