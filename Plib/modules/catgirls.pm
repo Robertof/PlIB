@@ -43,11 +43,11 @@ sub atWhile {
 	my ($self, $isTest, $botClass, $sent, $nick, $ident, $host) = @_;
 	return 1 if $isTest;
 
-    unless ($hasLoaded)
-    {
-    	&loadCatgirls;
-    	$hasLoaded=1;
-    }
+	unless ($hasLoaded)
+        {
+		&loadCatgirls;
+		$hasLoaded=1;
+        }
 
 	my $info;
 	if ($nick and $ident and $host and $info = $botClass->matchMsg ($sent)){
@@ -99,22 +99,22 @@ sub getLinkOnly{
 }
 
 sub loadCatgirls{
-        @posts=(); #I forgot it. >_>
-        @shownPosts=();
+        @posts = (); #I forgot it. >_>
+        @shownPosts = ();
 	foreach my $source (@sources)
 	{
-		my $feed=XML::FeedPP->new($source);
+		my $feed = XML::FeedPP->new($source);
 		#version 0.2: I must find a better way of taking photos
 		foreach my $post ($feed->get_item())
 		{
 			#not everyone leaves the default "Photo" title.
-			my $title=$post->title;
+			my $title = $post->title;
 			if (   $title =~ /Photo/i
 			    or $title =~ /No Catgirls Here/i
 			    or $title =~ /pixiv/i
 			    ) {
-				my $link=getLinkOnly($post->description());
-				push(@posts, $link);
+				@cat = (getLinkOnly($post->description()), $post->guid);
+				push(@posts, $cat);
 			}
 		}
 	}
@@ -127,7 +127,7 @@ sub randomCatgirl{
 	return "WTF" if $posts_length<1;
 
 	my $index=int(rand($posts_length));
-	my $message=$posts[$index];
+	my $message=$posts[$index][0] . ' (' . $post[$index][0] . ')';
 	#done in order to avoid "reposts"
 	splice @posts, $index, 1;
 	push(@shownPosts, $message);
