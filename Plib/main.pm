@@ -275,7 +275,7 @@ sub doWhile {
 					if ( ( time - $self->{"blacklist"}->{$_} ) >= 120 ) {
 						print $self->getPrefix . "[FLOOD] Un-blacklisting hostmask ${_}\n";
 						delete $self->{"blacklist"}->{$_};
-						$class->sendMsg ($class->getAllChannels (",", 0), "Notice: hostmask ${_} un-blacklisted");
+						#$class->sendMsg ($class->getAllChannels (",", 0), "Notice: hostmask ${_} un-blacklisted");
 					}
 				}
 				sleep (1);
@@ -311,7 +311,7 @@ sub doWhile {
 			if ($host) {
 				if (exists $self->{"flood"}->{$host} and $self->{"flood"}->{$host}->[0] >= 3 and not exists $self->{"blacklist"}->{$host}) {
 					print $self->getPrefix . "[FLOOD] Banning ${nick} (${host})\n";
-					$self->sendMsg ($self->getAllChannels (",", 0), "Notice: ${nick} (hostmask: ${host}) was blacklisted for flooding (blacklisted for 120 seconds)");
+					#$self->sendMsg ($self->getAllChannels (",", 0), "Notice: ${nick} (hostmask: ${host}) was blacklisted for flooding (blacklisted for 120 seconds)");
 					$self->{"blacklist"}->{$host} = time;
 					&{$self->evfunc("floodchk_ban")} ($self, $nick, $ident, $host);
 				}

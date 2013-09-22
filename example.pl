@@ -21,6 +21,6 @@ my $plib = Plib::main->new ("Plib", "plib", "PerL IrcBot", "", 0, 1, 1, "irc.uni
 $plib->setChans ("#Unit-X");
 ### ↓↓↓↓↓ OPTIONAL MODULES ↓↓↓↓↓                                     ###
 #   Usage: $mainclass->hook_modules (module1, module2, module3 ecc.) ###
-$plib->hook_modules ("firstplugin", "dml", "autorejoin", "fastkill", "autoreconnect");
+$plib->hook_modules ("firstplugin", "idcheck", "dml", "autorejoin", "fastkill", "autoreconnect");
 #
 $plib->startAll;
