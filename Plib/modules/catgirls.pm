@@ -13,17 +13,8 @@ use List::Util qw(shuffle);
 my $hasLoaded=0;
 my @posts;
 my @shownPosts;
-#I NEED MOAR SOURCES!
-my @sources=(
-             "http://catgirlsdoingcatthings.tumblr.com/rss",
-             "http://nocatgirls.tumblr.com/rss",
-             "http://tangopapatango.tumblr.com/rss",
-             "http://notd.tumblr.com/rss",
-             #even if this is not catgirl-related, it's ok.
-             "http://yuriyeah.tumblr.com/rss",
-             "http://faggotneko.tumblr.com/rss",
-             "http://moehikikomori.tumblr.com/rss"
-             );
+#now they are read from file.
+my @sources=();
 
 sub new {
 	return $_[0];
