@@ -15,6 +15,7 @@ my @posts;
 my @shownPosts;
 #now they are read from file.
 my @sources=();
+my @unloaded_sources=();
 
 sub new {
 	return $_[0];
@@ -46,7 +47,7 @@ sub atWhile {
 		    or $info->{"message"} =~ /nyaa\?/i
 		    or $info->{"message"} =~ /A catgirl is fine too!/i
 		    ) {
-			$botClass->sendMsg($info->{"chan"}, randomCatgirl());
+			  $botClass->sendMsg($info->{"chan"}, randomCatgirl());
 	    }
 	    elsif ($info->{"message"} =~ /Check a catgirl! (.*)/i){
 	    	my $lostCatgirl = $1;
@@ -56,35 +57,47 @@ sub atWhile {
 	    	$botClass->sendMsg($info->{"chan"}, "*activates Catgirl Finder* it may take a while...");
 	    	&loadCatgirls;
 	    	$botClass->sendMsg($info->{"chan"}, "ok, I got 'em all!");
+        #bugfix  #5 start
+        unless(scalar @unloaded_sources == 0)
+        {
+            my $unloaded_msg="These catgirl sources are closed or unreachable: ";
+            foreach my $bad_source (@unloaded_sources)
+            {
+                $bad_source = isolateSource($bad_source);
+                $unloaded_msg .=" $bad_source ~";
+            }
+            $unloaded_msg =~ s/ ~$/. /;
+            $unloaded_msg.= "We are sad, you can't see all the catgirls you requested. Try to fix the sources using \"remove a source!\" and \"add a source!\"";
+            $botClass->sendMsg($info->{"chan"}, $unloaded_msg);
+        }
+        #end bugfix #5
 	    }
 	    elsif($info->{"message"} =~ /Get older catgirls!/i){
 	    	$botClass->sendMsg($info->{"chan"}, "this functionality is not available at the time.")
 	    }
-        elsif($info->{"message"} =~ /Gimme the sources!/i)
-        {
-            $botClass->sendMsg($info->{"chan"}, "The sources are: ".printSources());
-        }
+      elsif($info->{"message"} =~ /Gimme the sources!/i)
+      {
+        $botClass->sendMsg($info->{"chan"}, "The sources are: ".printSources());
+      }
 	    elsif($info->{"message"} =~ /Add a source! (.*)/i){
-              $botClass->sendMsg($info->{"chan"}, addSource($1));
-              }
-            elsif($info->{"message"} =~ /Remove a source! (.*)/i){
-              {
-                $botClass->sendMsg($info->{"chan"}, removeSource($1));
-              }
-            }
-            elsif ($info->{"message"} =~ /^CATGIRLS!$/i)
+        $botClass->sendMsg($info->{"chan"}, addSource($1));
+      }
+      elsif($info->{"message"} =~ /Remove a source! (.*)/i){
+        $botClass->sendMsg($info->{"chan"}, removeSource($1));
+      }
+      elsif ($info->{"message"} =~ /^CATGIRLS!$/i)
 	    {
 	    	#the help
 	    	$botClass->sendMsg($info->{"chan"}, "Commands you can issue:");
 	    	$botClass->sendMsg($info->{"chan"}, "*) nyaa? | I want a catgirl! | A catgirl is fine too : get a random catgirl");
 	   		$botClass->sendMsg($info->{"chan"}, "*) Reload the catgirls! : reload the archive. useful for long-running bots");
 	   		$botClass->sendMsg($info->{"chan"}, "*) Get older catgirls! : finds moar catgirls");
-            $botClass->sendMsg($info->{"chan"}, "*) Gimme the sources! : lists the sources ");
-            $botClass->sendMsg($info->{"chan"}, "*) Add a source! [RSS Tumblr Feed] : adds a source to the sources");
-            $botClass->sendMsg($info->{"chan"}, "*) Remove a source! [Tumblr name] : removes a source from the sources. example for \"Tumblr name\": http://fredrin.tumblr.com --> fredrin");
+        $botClass->sendMsg($info->{"chan"}, "*) Gimme the sources! : lists the sources ");
+        $botClass->sendMsg($info->{"chan"}, "*) Add a source! [RSS Tumblr Feed] : adds a source to the sources");
+        $botClass->sendMsg($info->{"chan"}, "*) Remove a source! [Tumblr name] : removes a source from the sources. example for \"Tumblr name\": http://fredrin.tumblr.com --> fredrin");
 	   		$botClass->sendMsg($info->{"chan"}, "*) Check a catgirl! [url] : for debugging purposes. if in doubt, try launching 'Reload the catgirls!' command");
 	    }
-    }
+  }
 }
 
 sub checkACatgirl{
@@ -105,12 +118,24 @@ sub getLinkOnly{
 }
 
 sub loadCatgirls{
-    @posts = (); #I forgot it. >_>
-    @shownPosts = ();
-    @sources=loadSources();
+  @posts = (); #I forgot it. >_>
+  @shownPosts = ();
+  @sources=loadSources();
+  @unloaded_sources=();
 	foreach my $source (@sources)
 	{
-		my $feed = XML::FeedPP->new($source);
+    #bugfix #5 start
+    #old: my $feed = XML::FeedPP->new($source);
+    my $feed;
+    eval{
+		  $feed = XML::FeedPP->new($source);
+    };
+    if ($@)
+    {
+        push(@unloaded_sources, $source);
+        next; 
+    }
+    #end bugfix #5
 		#version 0.2: I must find a better way of taking photos
 		foreach my $post ($feed->get_item())
 		{
@@ -119,7 +144,7 @@ sub loadCatgirls{
 			if (#   $title =~ /Photo/i
 			    #or $title =~ /No Catgirls Here/i
 			    #or $title =~ /pixiv/i
-                    $post->description =~ /<img src="http:\/\/([^>"]*)"/
+            $post->description =~ /<img src="http:\/\/([^>"]*)"/
 			    ) {
 				my @cat = (getLinkOnly($post->description), $post->guid);
 				push(@posts, @cat);
@@ -210,6 +235,9 @@ sub loadSources{
 
 sub addSource{
     my $newSource=shift;
+    #"dat case sensitiveness!"  
+    $newSource = lc $newSource;
+    #end 
     $newSource =~ s/^\s+|\s+$//g;
     return "JUST THE TUMBLR NAME, YOU SMART ASS!" if $newSource =~ /^http/;
     return "$newSource is already a source!" if findSource("http://$newSource.tumblr.com/rss")>-1;
@@ -220,10 +248,16 @@ sub addSource{
         return "can't open the source database!";
     print SOURCES $newSource."\n";
     close SOURCES;
+    #bugfix #6 start
+    return "We'll look for catgirls there. Thanks for your suggestion!";
+    #end bugfix #6
 }
 
 sub removeSource{
    my $oldSource = shift;
+   #"dat case sensitiveness!"  
+   $oldSource = lc $oldSource;
+   #end 
    $oldSource=~ s/^\s+|\s+$//g;
    my $oldSourceUrl="http://$oldSource.tumblr.com/rss";
    return "$oldSource is not even a source!" unless findSource($oldSourceUrl)>-1;
@@ -237,6 +271,9 @@ sub removeSource{
      print SOURCES $1."\n";
    }
    close SOURCES;
+    #bugfix #6 start
+    return "We'll no longer look for catgirls there anymore. Thanks for your suggestion!";
+    #end bugfix #6
 }
 
 sub findSource{
@@ -249,5 +286,15 @@ sub findSource{
    }
    return -1;
 }
+
+#bugfix #5 start
+#not directly related with the bugfix
+#used only for show the source name
+sub isolateSource{
+    my $url = shift;
+    $url =~ m/http\:\/\/(.*)\.tumblr.com/;
+    return $1;
+}
+#end bugfix #5
 
 1;
