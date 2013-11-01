@@ -9,6 +9,7 @@
 package Plib::modules::dml;
 use strict;
 use warnings;
+use Module::Reload;
 
 # /!\ CONFIGURE PLUGIN HERE !! /!\ #
 sub new {
@@ -18,6 +19,7 @@ sub new {
 	my $guestcanUnload = 0; # Can non-owners unload modules?
 	my $guestcanLoad   = 0; # Can non-owners load modules?
 	my $guestcanDepends= 0; # Can non-owners show modules dependencies?
+	my $guestcanReload = 0; # Can non-owners reload modules?
 	my $guestcanListMod= 1; # Can non-owners list modules?
 	my @owners = ("Robertof"); # Warning: owners can unload and load modules without
 	                           # any limit
@@ -27,6 +29,7 @@ sub new {
 		"restricted"     => $restricted,
 		"guestcanunload" => $guestcanUnload,
 		"guestcanload"   => $guestcanLoad,
+		"guestcanreload" => $guestcanReload,
 		"guestcandepends"=> $guestcanDepends,
 		"guestcanlistmod"=> $guestcanListMod,
 		"owners"         => \@owners,
@@ -47,7 +50,7 @@ sub atWhile {
 	return 1 if $isTest;
 	my $info;
 	if ($nick and $ident and $host and $info = $botClass->matchMsg ($sent, 1)) {
-		if ($info->{"message"} =~ /^!dml (load|unload|depends) ([^\s]+)$/i) {
+		if ($info->{"message"} =~ /^!dml (load|unload|reload|depends) ([^\s]+)$/i) {
 			# Sanitize module name
 			my $action = lc ($1);
 			my $mname = $2;
@@ -64,12 +67,26 @@ sub atWhile {
 					$botClass->sendMsg ($info->{"chan"}, "Module ${mname} is not loaded");
 				} elsif ($action eq "load" and exists $botClass->{"hooked_modules"}->{$mname}) {
 					$botClass->sendMsg ($info->{"chan"}, "Error: module is already loaded");
-				} elsif ($action eq "unload" and not exists $botClass->{"hooked_modules"}->{$mname}) {
-					$botClass->sendMsg ($info->{"chan"}, "Error: module is already unloaded / doesn't exist");
+				} elsif (($action eq "unload" or $action eq "reload") and not exists $botClass->{"hooked_modules"}->{$mname}) {
+					$botClass->sendMsg ($info->{"chan"}, "Error: module is unloaded / doesn't exist");
 				} else {
-					$botClass->sendMsg ($info->{"chan"}, ( $action eq "load"  ? "L" : "Unl" ) . "oading module '${mname}'..");
+					#$botClass->sendMsg ($info->{"chan"}, ( $action eq "load"  ? "L" : $action eq "unload" ? "Unl" : "Rel" ) . "oading module '${mname}'..");
 					my $realmname = "Plib::modules::${mname}";
 					# Check if module exists / unloads successfully
+					if ($action eq "reload")
+					{
+						eval {
+							$botClass->unhook_module ($mname, 1);
+							#Module::Reload::Selective->reload ($realmname);
+							#eval "${realmname}->import";
+							Module::Reload->check;
+							#die $@ if $@;
+							$botClass->hook_modules ($mname);
+							$botClass->{"hooked_modules"}->{$mname}->atInit (0, $botClass);
+						};
+						$botClass->sendMsg ($info->{"chan"}, $@ ? "Something bad happened while reloading: $@" : "Successfully reloaded '${mname}'");
+						return;
+					}
 					eval "require ${realmname}" if $action eq "load";
 					if ($action eq "unload" and (my $p0rn = $botClass->check_dependencies ($mname))) {
 						$botClass->sendMsg ($info->{"chan"}, "Error: cannot unload module '${mname}': it's a dependency of '${p0rn}'");
@@ -83,8 +100,8 @@ sub atWhile {
 						$botClass->{"hooked_modules"}->{$mname}->atInit (0, $botClass) if $action eq "load";
 						$botClass->sendMsg ($info->{"chan"}, "Successfully " . ( $action eq "unload" ? "un" : "" ) . "loaded '${mname}'\n");
 					} else {
-						$botClass->sendMsg ($info->{"chan"}, "Module doesn't exist / Returned an error: $@");
-						eval "no ${realmname}";
+						$botClass->sendMsg ($info->{"chan"}, "Something bad happened: $@");
+						#eval "no ${realmname}";
 					}
 				}
 			} else {

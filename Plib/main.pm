@@ -156,9 +156,9 @@ sub check_dependencies {
 }
 
 sub unhook_module {
-	my ($self, $module) = @_;
+	my ($self, $module, $suppress_dependency_check) = @_;
 	return if not exists $self->{"hooked_modules"}->{$module};
-	if (my $porn = $self->check_dependencies ($module)) {
+	if (not $suppress_dependency_check and my $porn = $self->check_dependencies ($module)) {
 		die ($self->getPrefix . "[-] Error: cannot unload module '${module}' because is required by '${porn}'");
 	}
 	#print $self->getPrefix . "[~] Unhooking module ${module}..\n";
