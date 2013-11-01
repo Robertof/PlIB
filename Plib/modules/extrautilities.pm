@@ -89,7 +89,7 @@ sub atWhile
             return if $defNum < 0 or $defNum > 10;
             threads->create (\&handle_dict_term, $botClass, $info, $term, $defNum)->detach;
         }
-        elsif ($info->{"message"} =~ /^!?randomdict$/)
+        elsif ($info->{"message"} =~ /^!?random(?:dict|term)$/)
         {
             threads->create (sub {
                 my ($botClass, $info) = @_;
@@ -106,9 +106,9 @@ sub atWhile
                 handle_dict_term ($botClass, $info, $term, 1);
             }, $botClass, $info)->detach;
         }
-        elsif ($info->{"message"} =~ /^!?dict$/)
+        elsif ($info->{"message"} =~ /^!?(?:dict|define)$/)
         {
-            $botClass->sendMsg ($info->{"chan"}, 'usage: randomdict, dict/define $term, dict/define $term $definitionNum. Example: dict Roberto, define Giuseppe 2');
+            $botClass->sendMsg ($info->{"chan"}, 'usage: randomterm/randomdict, dict/define $term, dict/define $term $definitionNum. Example: dict Roberto, define Giuseppe 2');
         }
     }
 }
@@ -116,6 +116,7 @@ sub atWhile
 sub handle_dict_term
 {
     my ($botClass, $info, $term, $definition) = @_;
+    my $_target = "http://urbanup.com/" . uri_escape ($term);
     my $udpage = $lwp->get ("http://www.urbandictionary.com/define.php?term=" . uri_escape ($term));
     unless ($udpage->is_success)
     {
@@ -128,8 +129,22 @@ sub handle_dict_term
         $botClass->sendMsg ($info->{"chan"}, "no definition found for ${term}");
         return;
     }
-    my @real_defs = $definitions->get_elements;
-    $botClass->sendMsg ($info->{"chan"}, "definition for ${term}: " . $real_defs[$definition - 1]->as_trimmed_text);
+    my $def = @{$definitions->get_elements()}[$definition -1]->as_trimmed_text;
+    if (length $def > 800)
+    {
+        # try to perform an 'intelligent' truncation.
+        # long story short: if possible, find a point starting from right
+        # in the last 50 characters of the string, and truncate from that.
+        my $base_str   = substr ($def, 0, (799 - length ($_target) - length (' - moar at: ')));# my $rev = reverse ($base_str);
+        my $base_pos   = index (reverse ($base_str), '.'); #min (index ($rev, ' '), index ($rev, '.'), index ($rev, ';'), index ($rev, ','));
+        if ($base_pos > 50) {
+            $def = $base_str;
+        } else {
+            $def = substr ($base_str, 0, length ($base_str) - 1 - $base_pos);
+        }
+        $def .= " - more at: ${_target}";
+    }
+    $botClass->sendMsg ($info->{"chan"}, "definition for ${term}: " . $def);
 }
 
 sub parse_video
