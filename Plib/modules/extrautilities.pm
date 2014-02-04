@@ -123,7 +123,7 @@ sub handle_dict_term
         $botClass->sendMsg ($info->{"chan"}, "can't reach urbandictionary.com :(");
         return;
     }
-    my $definitions = HTML::Query->new (text => $udpage->decoded_content)->query (".definition");
+    my $definitions = HTML::Query->new (text => $udpage->decoded_content)->query (".meaning");
     if ($definitions->size < $definition)
     {
         $botClass->sendMsg ($info->{"chan"}, "no definition found for ${term}");

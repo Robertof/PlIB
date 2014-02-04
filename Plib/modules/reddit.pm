@@ -61,7 +61,7 @@ sub parse_post_from_id
         $botClass->sendMsg ($info->{"chan"}, sprintf ("\x02%s\x02 said: %s", $post->{"author"}, truncate_text_to ($post->{"selftext"}, 150)));
     } elsif ($post->{"num_comments"} > 0) {
         my $comment = $json->[1]->{"data"}->{"children"}->[0]->{"data"};
-        $botClass->sendMsg ($info->{"chan"}, sprintf ("Top comment (%s, %s) by \x02%s\x02: %s", ($comment->{"score_hidden"} ? "hidden score" : proper_plural ($comment->{"ups"} - $comment->{"downs"}, "point", "\x02", "\x02")), proper_particular_plural (int ($comment->{"replies"}->{"data"}->{"children"}->[0]->{"data"}->{"count"}), "reply", "replies", "\x02", "\x02"), $comment->{"author"}, truncate_text_to ($comment->{"body"}, 150)));
+        $botClass->sendMsg ($info->{"chan"}, sprintf ("Top comment (%s, %s) by \x02%s\x02: %s", ($comment->{"score_hidden"} ? "hidden score" : proper_plural ($comment->{"ups"} - $comment->{"downs"}, "point", "\x02", "\x02")), proper_particular_plural (int ($comment->{"replies"}->{"data"}->{"children"}->[0]->{"data"}->{"count"}) - 1, "reply", "replies", "\x02", "\x02"), $comment->{"author"}, truncate_text_to ($comment->{"body"}, 150)));
     }
 }
 
@@ -69,7 +69,7 @@ sub parse_subreddit
 {
     my ($botClass, $info, $subreddit_name) = @_;
     #print uri_escape($subreddit_name);
-    my $raw = $lwp->get ("http://www.reddit.com/r/" . uri_escape ($subreddit_name) . ".json?limit=1&sort=hot");
+    my $raw = $lwp->get ("http://www.reddit.com/r/" . uri_escape ($subreddit_name) . ".json?limit=2&sort=hot");
     if (!$raw->is_success)
     {
         $botClass->sendMsg ($info->{"chan"}, "I'm sorry, but an error occurred while fetching your data.");
