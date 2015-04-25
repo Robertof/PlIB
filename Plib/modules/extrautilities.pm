@@ -1,19 +1,30 @@
 package Plib::modules::extrautilities;
 use strict;
 use warnings;
-use Encode;
 use HTML::Query;
+use HTTP::Date ();
+use JSON;
 use LWP::UserAgent;
 use threads;
+use URI;
 use URI::Escape;
-use WebService::GData::YouTube;
-use WebService::GData::Base;
 
-my $yt  = WebService::GData::YouTube->new;
+use constant {
+    YOUTUBE_API_KEY            => "CHANGE_ME",
+    YOUTUBE_API_URL            => "https://www.googleapis.com/youtube/v3",
+    YOUTUBE_VIDEO_URL          => "%s/videos",
+    YOUTUBE_SEARCH_URL         => "%s/search",
+    YOUTUBE_CHANNEL_URL        => "%s/channels",
+    YOUTUBE_PLAYLIST_ITEMS_URL => "%s/playlistItems"
+};
+
+YOUTUBE_API_KEY eq "CHANGE_ME" and 
+    die "ERROR: you have to change the 'YOUTUBE_API_KEY' constant to a valid key.\n" .
+        "See here: https://developers.google.com/youtube/registering_an_application";
+
 my $lwp = LWP::UserAgent->new;
-
-sub new { return $_[0]; }
-sub atInit { return 1; }
+sub new { $_[0] }
+sub atInit { 1 }
 
 sub atWhile
 {
@@ -25,62 +36,28 @@ sub atWhile
         # YouTube stuff
         if ($info->{"message"} =~ /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch(?:\?v=|\?.+?&v=)|youtu\.be\/)([a-zA-Z0-9_-]+)/)
         {
-            parse_video ($botClass, $info, $1);
+            threads->create (\&parse_video, $botClass, $info, "$1")->detach;
         }
         elsif ($info->{"message"} =~ /^!?yt (?:ch(?:an)?(?:nel)?|user) (.+)$/)
         {
-            my $profile;
-            $yt->{_request} = new WebService::GData::Base();
-            eval { $profile = $yt->get_user_profile ($1); };
-            if (my $err = $@)
-            {
-                $botClass->sendMsg ($info->{"chan"}, "An error occurred while looking for a profile: " . $err->code);
-                return;
-            }
-            my $nick = $profile->{"_feed"}->{'yt$username'}->{"display"}; my $displayName = $profile->{"_feed"}->{"title"}->{"text"};
-            $botClass->sendMsg ($info->{"chan"}, sprintf ("%s / %d subscribers / %d views / http://www.youtube.com/channel/%s",
-                ($displayName . ($displayName ne $nick ? " / aka ${nick}" : "") , $profile->statistics->subscriber_count, $profile->statistics->total_upload_views, $profile->{'_feed'}->{'yt$channelId'}->{'$t'})));
+            threads->create (\&parse_channel, $botClass, $info, "$1")->detach;
         }
-        elsif ($info->{"message"} =~ /^!?yt last(?:video)? (.+)$/)
+        elsif ($info->{"message"} =~ /^!?yt last(?:videos?)? (.+)$/)
         {
-            my $videos;
-            $yt->{_request} = new WebService::GData::Base();
-            eval { $videos = $yt->get_user_videos ($1); };
-            if (my $err = $@)
-            {
-                $botClass->sendMsg ($info->{"chan"}, "An error occurred while looking for ${1}'s videos: " . $err->code);
-                return;
-            }
-            if (scalar (@$videos) eq 0)
-            {
-                $botClass->sendMsg ($info->{"chan"}, "The user didn't upload any videos.");
-                return;
-            }
-            output_video_info ($botClass, $info, $videos->[0], 1);
+            threads->create (\&get_last_videos, $botClass, $info, "$1", 3)->detach;
         }
-        elsif ($info->{"message"} =~ /^!?yt bestvideo$/)
+        elsif ($info->{"message"} =~ /^!?yt best(video|hacker)$/)
         {
-            parse_video ($botClass, $info, "vf5foZnBTDU", 1);
+            my $map = { hacker => "u8qgehH3kEQ", video =>  "vf5foZnBTDU" };
+            threads->create (\&parse_video, $botClass, $info, $map->{"$1"}, 1)->detach;
         }
         elsif ($info->{"message"} =~ /^!?yt (.+)$/)
         {
-            my $videos;
-            eval { $yt->query->q($1)->limit (1, 0); $videos = $yt->search_video(); };
-            if (my $err = $@)
-            {
-                $botClass->sendMsg ($info->{"chan"}, "An error occurred while searching: " . $err->code);
-                return;
-            }
-            if (scalar (@$videos) eq 0)
-            {
-                $botClass->sendMsg ($info->{"chan"}, "No results.");
-                return;
-            }
-            output_video_info ($botClass, $info, $videos->[0], 1);
+            threads->create (\&search_videos, $botClass, $info, "$1")->detach;
         }
         elsif ($info->{"message"} =~ /^!?yt$/)
         {
-            $botClass->sendMsg ($info->{"chan"}, 'usage: yt $query, yt chan/channel/user $name, yt last/lastvideo $name, yt bestvideo or just paste a YouTube link in the channel');
+            $botClass->sendMsg ($info->{"chan"}, 'usage: yt $query, yt chan/channel/user $name, yt last/lastvideo[s] $name, yt bestvideo or just paste a YouTube link in the channel');
         }
         # Urbandictionary stuff
         elsif ($info->{"message"} =~ /^!?(?:dict|define) (.+?)(?:\s(\d+)$|$)/)
@@ -147,35 +124,139 @@ sub handle_dict_term
     $botClass->sendMsg ($info->{"chan"}, "definition for ${term}: " . $def);
 }
 
+sub get_last_videos
+{
+    my ($botClass, $info, $channelName, $n) = @_;
+    # first request to /channels?part=contentDetails
+    my $content_details = lwp_json_req ($botClass, $info, yt_url (YOUTUBE_CHANNEL_URL,
+        part => "contentDetails", forUsername => $channelName,
+        fields => "items/contentDetails")) || return;
+    return $botClass->sendMsg ($info->{chan}, "Channel '$channelName' not found / request failed.")
+        unless exists $content_details->{items} && scalar @{$content_details->{items}} > 0;
+    # second request to /playlistItems?part=snippet
+    my $playlist_items = lwp_json_req ($botClass, $info, yt_url (YOUTUBE_PLAYLIST_ITEMS_URL,
+        part => "snippet", maxResults => $n, fields => "items/snippet",
+        playlistId => $content_details->{items}[0]{contentDetails}{relatedPlaylists}{uploads})
+    ) || return;
+    return $botClass->sendMsg ($info->{chan}, "Channel '$channelName' has no videos.")
+        unless exists $playlist_items->{items} && scalar @{$playlist_items->{items}} > 0;
+    # produce the final result
+    my @final;
+    foreach my $item (@{$playlist_items->{items}})
+    {
+        push @final, sprintf ("\x0304%s\x03 (https://youtu.be/%s)",
+            $item->{snippet}->{title}, $item->{snippet}->{resourceId}->{videoId});
+    }
+    $botClass->sendMsg ($info->{chan}, join (", ", @final));
+}
+
+sub parse_channel
+{
+    my ($botClass, $info, $channelName) = @_;
+    my $data = lwp_json_req ($botClass, $info, yt_url (YOUTUBE_CHANNEL_URL,
+        part => "snippet,statistics", forUsername => $channelName,
+        fields => "items(id,snippet,statistics)")) || return;
+    return $botClass->sendMsg ($info->{chan}, "Channel '$channelName' not found / request failed.")
+        unless exists $data->{items} && scalar @{$data->{items}} > 0;
+    my ($id, $snippet, $statistics) = @{$data->{items}[0]}{"id", "snippet", "statistics"};
+    $botClass->sendMsg ($info->{chan}, sprintf (
+        "\x0304%s\x03 / \x0304%s\x03 videos / \x0304%s\x03 subscribers / \x0304%s\x03 views / https://www.youtube.com/channel/%s",
+        $snippet->{title},
+        map ({ commify ($statistics->{"${_}Count"}) } qw[video subscriber view]),
+        $id
+    ));
+}
+
 sub parse_video
 {
-    my ($botClass, $info, $id, $flag) = @_;
-    my $video;
-    $yt->{_request} = new WebService::GData::Base(); # fix a bug with the library
-    eval { $video = $yt->get_video_by_id ($id); };
-    if (my $err = $@)
+    my ($botClass, $info, $videoId, $incl_link) = @_;
+    my $vid = lwp_json_req ($botClass, $info, yt_url (YOUTUBE_VIDEO_URL,
+        part => "snippet,statistics,contentDetails", id => $videoId,
+        fields => "items(contentDetails,snippet,statistics)")) || return;
+    return $botClass->sendMsg ($info->{chan}, "Video '$videoId' not found / request failed.")
+        unless exists $vid->{items} && scalar @{$vid->{items}} > 0;
+    my ($snippet, $statistics, $content_details) = @{$vid->{items}[0]}{
+        "snippet", "statistics", "contentDetails"
+    };
+    my ($likes, $dislikes) = map { $statistics->{"${_}Count"} } qw[like dislike];
+    my $rating = ($likes == 0 && $dislikes == 0) ? 0 : int (0.5 + ($likes * 5) / ($likes + $dislikes));
+    $botClass->sendMsg ($info->{"chan"}, sprintf (
+        "\x0304%s\x03 / by \x0304%s\x03 / \x0304%s\x03 views / uploaded \x0304%s\x03 / duration: \x0304%s\x03 / rating: \x038%s\x03%s%s",
+        $snippet->{title},
+        $snippet->{channelTitle},
+        commify ($statistics->{viewCount}),
+        relative_time (time() - HTTP::Date::str2time ($snippet->{publishedAt})),
+        iso8601_to_acceptable_duration ($content_details->{duration}),
+        "\x{2605}" x $rating,
+        "\x{2606}" x (5 - $rating),
+        defined $incl_link ? " / https://youtu.be/$videoId" : ""
+    ));
+}
+
+sub search_videos
+{
+    my ($botClass, $info, $query) = @_;
+    my $res = lwp_json_req ($botClass, $info, yt_url (YOUTUBE_SEARCH_URL,
+        part => "snippet", maxResults => 1, q => $query, type => "video",
+        fields => "items/id")) || return;
+    return $botClass->sendMsg ($info->{chan}, "Nothing found while searching for '$query' / request failed.")
+        unless exists $res->{items} && scalar @{$res->{items}} > 0;
+    parse_video ($botClass, $info, $res->{items}[0]{id}{videoId}, 1);
+}
+
+sub yt_url
+{
+    my ($url, %params) = @_;
+    my $uri = URI->new (sprintf $url, YOUTUBE_API_URL);
+    $uri->query_form (key => YOUTUBE_API_KEY, %params);
+    $uri->as_string;
+}
+
+sub iso8601_to_acceptable_duration
+{
+    my $val = shift;
+    $val =~ s/[PT]//g;
+    lc $val;
+}
+
+sub commify
+{
+    my $text = reverse $_[0];
+    $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+    return scalar reverse $text;
+}
+
+sub relative_time
+{
+    my $delta = shift;
+    return $delta == 1 ? "one second ago" : "$delta seconds ago" if $delta < 60;
+    return "a minute ago" if $delta < 120;
+    return "@{[int(0.5 + $delta / 60)]} minutes ago" if $delta < 2700; # 45 minutes
+    return "an hour ago" if $delta < 5400; # 90 minutes
+    return "@{[int(0.5 + $delta / 3600)]} hours ago" if $delta < 86400;
+    return "yesterday" if $delta < 172800; # 24 hours
+    return "@{[int(0.5 + $delta / 86400)]} days ago" if $delta < 2592000; # 30 days
+    if ($delta < 31104000) # 12 months
     {
-        $botClass->sendMsg ($info->{"chan"}, "An error occurred while fetching video data: " . $err->code);
+        my $months = int (0.5 + $delta / 86400 / 30);
+        return $months <= 1 ? "one month ago" : "$months months ago";
+    }
+    my $years = int (0.5 + $delta / 86400 / 365);
+    $years <= 1 ? "one year ago" : "$years years ago";
+}
+
+sub lwp_json_req
+{
+    my ($botClass, $info, $url) = @_;
+    my $req = $lwp->get ($url);
+    unless ($req->is_success)
+    {
+        $botClass->sendMsg ($info->{chan}, "Can't reach the desired URL: " . $req->status_line);
         return;
     }
-    output_video_info ($botClass, $info, $video, $flag);
-}
-
-sub output_video_info
-{
-    my ($botClass, $info, $video, $incl_lnk) = @_;
-    my $likes = $video->rating->{"numLikes"};
-    my $dislikes = $video->rating->{"numDislikes"};
-    $botClass->sendMsg ($info->{"chan"}, sprintf ("%s / by %s / %d views / Duration: %s / %d likes / %d dislikes%s",
-        Encode::decode ("utf8", $video->title), $video->uploader, $video->view_count, yt_date ($video->duration), $likes, $dislikes, (defined $incl_lnk ? " / \x02http://youtu.be/" . $video->video_id : "")));
-}
-
-sub yt_date
-{
-    my $duration = shift;
-    my $res = sprintf ("%02d:%02d:%02d:%02d", (gmtime $duration)[7, 2, 1, 0]);
-    $res =~ s/^00:// while ($res =~ /^00:/);
-    $res = "00:" . $res if $duration < 60;
-    $res;
+    my $parsed;
+    eval { $parsed = decode_json $req->decoded_content; 1 } or
+        $botClass->sendMsg ($info->{chan}, "Can't decode the JSON document: $@"), return;
+    $parsed;
 }
 1;
